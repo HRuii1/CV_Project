@@ -19,25 +19,20 @@ class C3DEncoder(nn.Module):
         self.conv3b = nn.Conv3d(256, 256, kernel_size=(3,3,3), padding=1)
         self.pool3 = nn.MaxPool3d(kernel_size=(2,2,2), stride=(2,2,2))
         
-        self.fc4 = nn.Linear(256*2*14*14, 2048)
+        self.fc4 = nn.Linear(256*4*14*14, 2048)
         self.fc5 = nn.Linear(2048, 15360)
         self.relu = nn.ReLU(inplace=True)
         
     def forward(self, x):
-        # x shape: (B, 3, D=16, H=112, W=112)
+        # Dynamically infer flattened size
         x = self.relu(self.conv1(x))
-        x = self.pool1(x)  # shape => (B, 64, 16, 56, 56)
-        
+        x = self.pool1(x)
         x = self.relu(self.conv2(x))
-        x = self.pool2(x)  # shape => (B, 128, 8, 28, 28)
-        
+        x = self.pool2(x)
         x = self.relu(self.conv3a(x))
         x = self.relu(self.conv3b(x))
-        x = self.pool3(x)  # shape => (B, 256, 4, 14, 14)
-        
-        # Flatten
-        x = x.view(x.size(0), -1)  # (B, 256*4*14*14) = (B, 256*2*14*14) if D=8, depends on downsampling
-        
+        x = self.pool3(x)
+        x = x.view(x.size(0), -1)
         x = self.relu(self.fc4(x))
-        x = self.fc5(x)   # (B, 15360)
+        x = self.fc5(x)
         return x

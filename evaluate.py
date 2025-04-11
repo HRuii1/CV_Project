@@ -4,7 +4,8 @@ import os
 import torch
 from tqdm import tqdm
 from config import Config
-from data.dataloader import get_dataloader
+from data.dataloader import get_pt_dataloader, read_list_file
+from data_processing_augmented import read_captions_file, read_list_file
 from transformers import GPT2Tokenizer
 from models.c3d_model import C3DEncoder
 from models.clip_model import CLIPEncoder
@@ -14,11 +15,10 @@ from utils.metrics import calculate_bleu
 from utils.beam_search import beam_search_decoding
 
 # Example dummy annotations (video_id, ref_caption)
-VAL_ANNOTATIONS = [
-    ("video1", "a dog is running on the beach"),
-    ("video2", "two people are dancing"),
-    # ...
-]
+train_ids = read_list_file(Config.TRAIN_LIST)
+caption_dict = read_captions_file(Config.CAPTIONS_FILE)
+VAL_ANNOTATIONS = [(vid, cap) for vid in train_ids for cap in caption_dict.get(vid, [])]
+
 
 def generate_caption_c3d(c3d_encoder, fusion_model, gpt2_decoder, video_feats, tokenizer, device, beam_width=1):
     # video_feats shape: (1, 16, 3, 112, 112)
@@ -74,7 +74,7 @@ def main():
     tokenizer = GPT2Tokenizer.from_pretrained(Config.GPT2_MODEL_NAME)
     
     # Load your best checkpoint
-    checkpoint_path = os.path.join(Config.OUTPUT_DIR, "model_epoch_10.pt")
+    checkpoint_path = os.path.join(Config.OUTPUT_DIR, "model_epoch_2.pt")
     checkpoint = torch.load(checkpoint_path, map_location=device)
     
     # Create model instances
@@ -97,11 +97,22 @@ def main():
     gpt2_decoder.load_state_dict(checkpoint["gpt2_decoder"])
     
     # Prepare dataset/loader for evaluation
-    val_loader = get_dataloader(
-        feature_dir=Config.PROCESSED_C3D_FEATS if USE_C3D else Config.PROCESSED_CLIP_FEATS,
+    # val_loader = get_pt_dataloader(
+    #     feature_pt_path=Config.PROCESSED_C3D_FEATS if USE_C3D else Config.PROCESSED_CLIP_FEATS,
+    #     split_name="test",  # this accesses version1["test"]
+    #     annotations=test_annotations,
+    #     tokenizer=tokenizer,
+    #     batch_size=1,
+    #     shuffle=False
+    # )
+
+    # for simplicity, we will use the same train annotations for validation
+    val_loader = get_pt_dataloader(
+        feature_pt_path=Config.PROCESSED_C3D_FEATS,  # or Config.PROCESSED_CLIP_FEATS
+        split_name="train",  # not "test"
         annotations=VAL_ANNOTATIONS,
         tokenizer=tokenizer,
-        batch_size=1,   # evaluate 1 by 1 for simplicity
+        batch_size=1,
         shuffle=False
     )
     

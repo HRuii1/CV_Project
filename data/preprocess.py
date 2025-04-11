@@ -6,6 +6,9 @@ import torch
 import numpy as np
 import clip
 from PIL import Image
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from config import Config
 
 def extract_frames_c3d(video_path, num_frames=16, frame_size=112):
@@ -83,7 +86,7 @@ def preprocess_c3d_features(video_dir, out_dir):
         frames = extract_frames_c3d(video_path, Config.NUM_FRAMES_C3D, 112)
         out_path = os.path.join(out_dir, vf + ".npy")
         np.save(out_path, frames)
-        print(f"Saved C3D frames: {out_path}")
+        print("Saved C3D frames:", out_path)
 
 def preprocess_clip_features(video_dir, out_dir):
     """
@@ -111,7 +114,7 @@ def preprocess_clip_features(video_dir, out_dir):
         frame_features = frame_features.cpu().numpy()
         out_path = os.path.join(out_dir, vf + ".npy")
         np.save(out_path, frame_features)
-        print(f"Saved CLIP features: {out_path}")
+        print("Saved CLIP features:", out_path)
 
 if __name__ == "__main__":
     # Example usage:

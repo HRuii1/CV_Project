@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from config import Config
-from data.dataloader import get_dataloader
+from data.dataloader import get_pt_dataloader, read_list_file
 from transformers import GPT2Tokenizer
 from models.c3d_model import C3DEncoder
 from models.clip_model import CLIPEncoder
@@ -15,11 +15,36 @@ from models.gpt2_decoder import GPT2Decoder
 
 # Example dummy annotations
 # Each item: (video_id_without_extension, "caption text")
-TRAIN_ANNOTATIONS = [
-    ("video1", "a dog is running on the beach"),
-    ("video2", "two people are dancing"),
-    # ...
-]
+from data_processing_augmented import read_list_file, read_captions_file
+
+train_ids = read_list_file(Config.TRAIN_LIST)
+video_captions_dict = read_captions_file(Config.CAPTIONS_FILE)
+
+train_annotations = []
+for vid in train_ids:
+    for caption in video_captions_dict.get(vid, []):
+        train_annotations.append((vid, caption))
+
+train_ids = read_list_file(Config.TRAIN_LIST)
+
+
+
+# def load_annotations(split, captions_file, split_ids):
+#     annotations = []
+#     with open(captions_file, 'r', encoding='utf-8') as f:
+#         for line in f:
+#             line = line.strip()
+#             if not line or line.startswith('#'):
+#                 continue
+#             parts = line.split(maxsplit=1)
+#             if len(parts) < 2:
+#                 continue
+#             vid, caption = parts
+#             if vid in split_ids:
+#                 annotations.append((vid, caption))
+#     return annotations
+
+# train_annotations = load_annotations("train", Config.CAPTIONS_FILE, train_ids)
 
 def train_one_epoch(loader, c3d_encoder, clip_encoder, fusion_model, gpt2_decoder, optimizer, device):
     c3d_encoder.train()
@@ -95,9 +120,10 @@ def main():
     tokenizer = GPT2Tokenizer.from_pretrained(Config.GPT2_MODEL_NAME)
     
     # Create your DataLoader
-    train_loader = get_dataloader(
-        feature_dir=Config.PROCESSED_C3D_FEATS,  # or PROCESSED_CLIP_FEATS
-        annotations=TRAIN_ANNOTATIONS,
+    train_loader = get_pt_dataloader(
+        feature_pt_path=Config.PROCESSED_C3D_FEATS,  # or PROCESSED_CLIP_FEATS
+        split_name="train",
+        annotations=train_annotations,  # e.g., [("video1", "caption1"), ...]
         tokenizer=tokenizer,
         batch_size=Config.BATCH_SIZE,
         shuffle=True
