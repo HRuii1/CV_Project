@@ -10,7 +10,7 @@
 #SBATCH --gres=gpu:1                        # Number of GPUs
 
 # Load modules and activate your env
-module load python/3.11.4
+module load python/3.11.5
 module load cuda
 source ~/venvs/msvd311/bin/activate
 

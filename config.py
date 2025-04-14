@@ -10,7 +10,7 @@ class Config:
     ########################
     # Training Hyperparameters
     ########################
-    EPOCHS = 2
+    EPOCHS = 5
     BATCH_SIZE = 8
     LEARNING_RATE = 1e-4
 
@@ -38,12 +38,13 @@ class Config:
     # We build annotations directly from the .pt files
 
     # C3D and CLIP features
-    PROCESSED_C3D_FEATS = "../../MSVD/version1.pt"
-    PROCESSED_CLIP_FEATS = "../../MSVD/version2.pt"
+    PROCESSED_C3D_FEATS = "/bigtemp/vmr8pg/MSVD/version1.pt"
+    PROCESSED_C3D_FEATS_AUG = "/bigtemp/vmr8pg/MSVD/version1_aug.pt"
+    # PROCESSED_C3D_FEATS_AUG = "mini.pt"
+    # PROCESSED_C3D_FEATS = "mini.pt"
+    PROCESSED_CLIP_FEATS = "/bigtemp/vmr8pg/MSVD/version2.pt"
+    PROCESSED_CLIP_FEATS_AUG = "/bigtemp/vmr8pg/MSVD/version2_aug.pt"
 
-    # Augmented features for training
-    PROCESSED_C3D_FEATS_AUG = "../../MSVD/version1_aug.pt"
-    PROCESSED_CLIP_FEATS_AUG = "../../MSVD/version2_aug.pt"
 
     # Debug mode limit
-    DEBUG_LIMIT = 2  # set to None or a small number to debug faster
+    DEBUG_LIMIT = None  # set to None or a small number to debug faster

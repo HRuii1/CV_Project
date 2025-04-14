@@ -29,6 +29,7 @@ class CLIPEncoder(nn.Module):
         # If you have raw images, you'd do: self.model.encode_image(...)
         # but here we assume 'frame_feats' are already the 512-dim CLIP embeddings per frame.
         B, F, C = frame_feats.size()  # typically (batch_size, 5, 512)
+        frame_feats = frame_feats.to(dtype=torch.float32)  
         out = []
         for i in range(F):
             # For each frame, project to 768

@@ -80,6 +80,7 @@ def train_one_epoch(loader, c3d_encoder, clip_encoder, fusion_model, gpt2_decode
         else:
             enc_out = clip_encoder(video_feats)
 
+        print("enc_out.shape", enc_out.shape) # Debugging line for checking output shape
         # Now feed into fusion model
         context_embeds = fusion_model(enc_out)  # shape (B, T_ctx, 768) presumably
 
@@ -152,7 +153,8 @@ def validate_one_epoch(loader, c3d_encoder, clip_encoder, fusion_model, gpt2_dec
 
         total_loss += loss.item()
 
-    return total_loss / len(loader)
+    # return total_loss / len(loader)
+    return total_loss / max(len(loader), 1) # just to avoid div by zero bug
 
 
 ################################################
@@ -162,8 +164,10 @@ def validate_one_epoch(loader, c3d_encoder, clip_encoder, fusion_model, gpt2_dec
 def main():
     torch.manual_seed(Config.SEED)
     device = torch.device(Config.DEVICE)
+    
 
     tokenizer = GPT2Tokenizer.from_pretrained(Config.GPT2_MODEL_NAME)
+    tokenizer.pad_token = tokenizer.eos_token
 
     def build_annotations_from_augmented_data(pt_path):
         data = torch.load(pt_path, map_location='cpu')
@@ -174,38 +178,71 @@ def main():
                     annotations.append((vid, entry['caption']))
         return annotations
 
-    train_annotations = build_annotations_from_augmented_data(Config.PROCESSED_C3D_FEATS_AUG)
-    val_annotations = build_annotations_from_augmented_data(Config.PROCESSED_C3D_FEATS)
+    # train_annotations = build_annotations_from_augmented_data(Config.PROCESSED_C3D_FEATS_AUG)
+    # val_annotations = build_annotations_from_augmented_data(Config.PROCESSED_C3D_FEATS)
 
-    # 3) Create lazy loaders
-    # Decide which .pt file to use => e.g. version1_aug.pt, version2_aug.pt, etc.
+    # # 3) Create lazy loaders
+    # # Decide which .pt file to use => e.g. version1_aug.pt, version2_aug.pt, etc.
+    # train_loader = get_lazy_dataloader(
+    #     pt_path=Config.PROCESSED_C3D_FEATS_AUG,  # e.g., version1_aug.pt
+    #     annotations=train_annotations,
+    #     tokenizer=tokenizer,
+    #     batch_size=Config.BATCH_SIZE,
+    #     shuffle=True,
+    #     limit=Config.DEBUG_LIMIT  # e.g. set to 100 for debug
+    # )
+
+    # val_loader = get_lazy_dataloader(
+    #     pt_path=Config.PROCESSED_C3D_FEATS,  # base version for val
+    #     annotations=val_annotations,
+    #     tokenizer=tokenizer,
+    #     batch_size=Config.BATCH_SIZE,
+    #     shuffle=False
+    # )
+    train_annotations = build_annotations_from_augmented_data(Config.PROCESSED_CLIP_FEATS_AUG)
+    val_annotations   = build_annotations_from_augmented_data(Config.PROCESSED_CLIP_FEATS)
+
     train_loader = get_lazy_dataloader(
-        pt_path=Config.PROCESSED_C3D_FEATS_AUG,  # e.g., version1_aug.pt
+        pt_path=Config.PROCESSED_CLIP_FEATS_AUG,
         annotations=train_annotations,
         tokenizer=tokenizer,
         batch_size=Config.BATCH_SIZE,
         shuffle=True,
-        limit=Config.DEBUG_LIMIT  # e.g. set to 100 for debug
+        limit=Config.DEBUG_LIMIT
     )
 
+    print(f"Loaded {len(val_annotations)} validation annotations")
     val_loader = get_lazy_dataloader(
-        pt_path=Config.PROCESSED_C3D_FEATS,  # base version for val
+        pt_path=Config.PROCESSED_CLIP_FEATS,
         annotations=val_annotations,
         tokenizer=tokenizer,
         batch_size=Config.BATCH_SIZE,
         shuffle=False
     )
 
+
+
     # 4) Build model
-    USE_C3D = True  # or False for CLIP
+    USE_C3D = False  # or True if using C3D
+
     if USE_C3D:
         c3d_encoder = C3DEncoder().to(device)
         clip_encoder = None
+        fusion_model = SimpleFusion(
+            context_tokens=Config.CONTEXT_TOKENS,
+            input_dim=768,  # C3D outputs 768-dim features
+            frames=16       # C3D uses 16 frames
+        ).to(device)
     else:
         c3d_encoder = None
         clip_encoder = CLIPEncoder(freeze_clip=Config.FREEZE_CLIP).to(device)
+        fusion_model = SimpleFusion(
+            context_tokens=Config.CONTEXT_TOKENS,
+            input_dim=768,  # CLIP features are 512-dim
+            frames=5        # CLIP uses 5 frames
+        ).to(device)
 
-    fusion_model = SimpleFusion(context_tokens=Config.CONTEXT_TOKENS).to(device)
+
     gpt2_decoder = GPT2Decoder().to(device)
 
     # 5) Optimizer

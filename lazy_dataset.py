@@ -38,6 +38,7 @@ class LazyAugDataset(Dataset):
 
     def __getitem__(self, idx):
         vid, caption = self.annotations[idx]
+        print(f"Loading: {vid}")
         # In case the video is missing
         if vid not in self.video_dict:
             # Return dummy zero features
