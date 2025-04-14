@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Environment
+.venv/
+env/
+venv/
+ENV/
+*.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+*.out
+*.err
+*.txt
+logs/
+output.txt
+error.txt
+
+# Data
+data/debug_data/*
+!data/debug_data/*.txt    # keep list files
+debug_data/
+*.avi
+*.mp4
+*.npy
+*.pt
+
+# HuggingFace cache
+~/.cache/huggingface/
+hf_cache/
+
+# Checkpoints and models
+checkpoints/
+*.pt
+
+# Slurm
+slurm-*.out
+job.sh
+
+# Others
+*.tar.gz
+*.zip
+
+*.tar
