@@ -22,18 +22,25 @@ class CLIPEncoder(nn.Module):
         
     def forward(self, frame_feats):
         """
-        frame_feats: (B, num_frames, 512) if they've already been pre-extracted
-                     or if you want to use the model to extract, pass raw images.
-        Returns a single 2D tensor (B, num_frames, 768).
+        Handles two types of inputs:
+        1. Raw frames (B, F, 3, 224, 224) — use CLIP's model.encode_image
+        2. Precomputed features (B, F, 512)
         """
-        # If you have raw images, you'd do: self.model.encode_image(...)
-        # but here we assume 'frame_feats' are already the 512-dim CLIP embeddings per frame.
-        B, F, C = frame_feats.size()  # typically (batch_size, 5, 512)
+        if frame_feats.dim() == 5:
+            B, F, C, H, W = frame_feats.shape
+            feats = []
+            for i in range(F):
+                img_batch = frame_feats[:, i, :, :, :]  # (B, 3, 224, 224)
+                with torch.no_grad():
+                    feat = self.model.encode_image(img_batch)  # (B, 512)
+                feats.append(feat.unsqueeze(1))  # (B, 1, 512)
+            frame_feats = torch.cat(feats, dim=1)  # (B, F, 512)
+
+        # Project to 768
+        B, F, C = frame_feats.size()
         frame_feats = frame_feats.to(dtype=torch.float32)  
         out = []
         for i in range(F):
-            # For each frame, project to 768
             projected = self.proj(frame_feats[:, i, :])  # (B, 512) -> (B, 768)
             out.append(projected.unsqueeze(1))
-        out = torch.cat(out, dim=1)  # shape (B, F, 768)
-        return out
+        return torch.cat(out, dim=1)  # (B, F, 768)
